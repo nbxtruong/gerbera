@@ -4,9 +4,9 @@ Docker installation of [gerbera](https://github.com/gerbera/gerbera), a upnp med
 # Usage
 Either | Or
 -------|---
-git clone https://github.com/gpbenton/gerbera.git | docker pull gpbenton/gerbera
-cd gerbera                                        | mkdir gerbera
-docker-compose build                              | cd gerbera
+git clone https://github.com/nbxtruong/gerbera.git | docker pull gpbenton/gerbera
+cd gerbera                                         | mkdir gerbera
+docker-compose build                               | cd gerbera
 
 - mkdir config
 - chmod 777 config
