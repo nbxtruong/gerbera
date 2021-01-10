@@ -1,16 +1,23 @@
-version: '2.0'
+version: "2.0"
 
 services:
     app:
-        build: 
-          context: .
-          args:
-            VERSION: 1.4.0
-        restart: always
+        build:
+            context: .
+            args:
+                VERSION: 1.6.4
+        ports:
+            - 49152:49152
+            - 1900:1900/udp
         volumes:
-            - "/home/truong/nas/pictures:/media/pictures:ro"
-            - "/home/truong/nas/videos:/media/videos:ro"
-            - "/home/truong/nas/music:/media/music:ro"
-            - "${PWD}/config:/home/gerbera/.config/gerbera"
+            # - "/home/truong/nas/pictures:/media/pictures:ro"
+            # - "/home/truong/nas/videos:/media/videos:ro"
+            # - "/home/truong/nas/music:/media/music:ro"
+            # - "./data/config:/root/.config/gerbera"
+
+            - "./data/pictures:/media/pictures:ro"
+            - "./data/videos:/media/videos:ro"
+            - "./data/music:/media/music:ro"
+            - "./data/config:/root/.config/gerbera"
         network_mode: "host"
         restart: always

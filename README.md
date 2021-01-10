@@ -14,15 +14,6 @@ docker-compose build                               | cd gerbera
 - docker run -it --rm gerbera_app --create-config > config/config.xml  # this generates the configuration file for gerbera
 - docker-compose up
 - Stop docker (Ctrl + C)
-- Edit config/config.xml and add the following to the `import` section
-
-```
-    <autoscan>
-        <directory location="/media" mode="timed" interval="3600"
-        level="full" recursive="yes" hidden-files="no"/>
-    </autoscan>
-```
-
 - Remove the top text before the config section and then add this line to the top
 
 ```

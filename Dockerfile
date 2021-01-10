@@ -1,70 +1,65 @@
-FROM ubuntu:18.04 as builder
+# Compile from source code
+FROM alpine:3.12 as builder
 
-RUN apt-get update && apt-get upgrade -y && apt-get install -y uuid-dev libexpat1-dev libsqlite3-dev libmysqlclient-dev \
-libmagic-dev libexif-dev libcurl4-openssl-dev \
-libavutil-dev libavcodec-dev libavformat-dev libavdevice-dev \
-libavfilter-dev libavresample-dev libswscale-dev libswresample-dev libpostproc-dev \
-cmake git g++ wget autoconf build-essential libtool libffmpegthumbnailer-dev \
-pkg-config
+RUN apk add --no-cache tini gcc g++ pkgconf make automake autoconf libtool \
+    util-linux-dev sqlite-dev mariadb-connector-c-dev cmake zlib-dev fmt-dev \
+    file-dev libexif-dev curl-dev ffmpeg-dev ffmpegthumbnailer-dev wget xz \
+    libmatroska-dev libebml-dev taglib-dev pugixml-dev spdlog-dev \
+    tree
 
 ARG VERSION
-ENV VERSION ${VERSION:-1.3.1}
+ENV VERSION ${VERSION:-1.6.4}
 
-WORKDIR /tmp
+WORKDIR /gerbera_build
 
 RUN wget https://github.com/gerbera/gerbera/archive/v${VERSION}.tar.gz && tar -xzvf v${VERSION}.tar.gz
+RUN cp -R gerbera-${VERSION}/. .
 
-RUN sh gerbera-${VERSION}/scripts/install-pupnp18.sh
-RUN sh gerbera-${VERSION}/scripts/install-taglib111.sh
-RUN sh gerbera-${VERSION}/scripts/install-duktape.sh
+RUN bash scripts/install-pupnp.sh
+RUN bash scripts/install-duktape.sh
 
-RUN apt-get install -y libmatroska-dev
-RUN mkdir build && cd build && cmake ../gerbera-${VERSION} -DWITH_MAGIC=1 -DWITH_CURL=1 -DWITH_JS=1 \
--DWITH_TAGLIB=1 -DWITH_AVCODEC=1 -DWITH_FFMPEGTHUMBNAILER=1 -DWITH_EXIF=1 -DWITH_SYSTEMD=0 && make -j4 && make install
+RUN mkdir build && \
+    cd build && \
+    cmake ../ -DWITH_MAGIC=1 -DWITH_MYSQL=1 -DWITH_CURL=1 -DWITH_JS=1 \
+    -DWITH_TAGLIB=1 -DWITH_AVCODEC=1 -DWITH_FFMPEGTHUMBNAILER=1 \
+    -DWITH_EXIF=1 -DWITH_LASTFM=0 -DWITH_SYSTEMD=0 -DWITH_DEBUG=1 && \
+    make -j`nproc`
 
 
+# Run Gerbera service
+FROM alpine:3.12
 
-
-FROM ubuntu:18.04
-
-RUN apt-get update && apt-get upgrade -y && apt-get install -y libixml10 \
-    libexpat1 libsqlite3-0 libcurl4 libmagic1 libavformat57 \
-    libffmpegthumbnailer4v5 libmatroska6v5 libexif12
+RUN apk add --no-cache tini util-linux sqlite mariadb-connector-c zlib fmt \
+    file libexif curl ffmpeg-libs ffmpegthumbnailer libmatroska libebml taglib \
+    pugixml spdlog sqlite-libs
 
 ARG VERSION
-ENV VERSION ${VERSION:-1.3.1}
+ENV VERSION ${VERSION:-1.6.4}
 
-copy --from=builder /usr/local/bin/gerbera /usr/local/bin/gerbera
-copy --from=builder /usr/local/share/gerbera /usr/local/share/gerbera
+# Manually built libs
+COPY --from=builder /usr/local/lib/libupnp.so* /usr/local/lib/
+COPY --from=builder /usr/local/lib/libixml.so* /usr/local/lib/
+COPY --from=builder /usr/local/lib/libduktape.so* /usr/local/lib/
 
-copy --from=builder /usr/local/lib/libduktape* /usr/local/lib/
-copy --from=builder /usr/local/include/duktape.h /usr/local/include/
-copy --from=builder /usr/local/include/duk_config.h /usr/local/include/
-
-copy --from=builder /usr/local/bin/taglib-config /usr/local/bin/
-copy --from=builder /usr/local/lib/pkgconfig/taglib.pc /usr/local/lib/pkgconfig/taglib.pc
-copy --from=builder /usr/local/lib/libtag.a /usr/local/lib/libtag.a
-copy --from=builder /usr/local/include/taglib /usr/local/include/taglib
-copy --from=builder /usr/local/lib/libtag_c.a /usr/local/lib/libtag_c.a
-copy --from=builder /usr/local/include/taglib/tag_c.h /usr/local/include/taglib/tag_c.h
-copy --from=builder /usr/local/lib/pkgconfig/taglib_c.pc /usr/local/lib/pkgconfig/taglib_c.pc
-
-copy --from=builder /usr/local/lib/libupnp* /usr/local/lib/
-
-RUN useradd gerbera 
+# Gerbera itself
+COPY --from=builder /gerbera_build/build/gerbera /bin/gerbera
+COPY --from=builder /gerbera_build/gerbera-${VERSION}/scripts/js /usr/local/share/gerbera/js
+COPY --from=builder /gerbera_build/gerbera-${VERSION}/web /usr/local/share/gerbera/web
 
 RUN rm -rf /tmp/* && \
-    mkdir -p /media/pictures /media/videos /media/music /home/gerbera && \
-    chown gerbera:gerbera /home/gerbera 
+    mkdir -p /media/pictures /media/videos /media/music /root/.config/gerbera
 
-USER gerbera
+# RUN gerbera --create-config > /root/.config/gerbera/config.xml &&\
+#     sed 's/<import hidden-files="no">/<import hidden-files="no">\n\
+#     <autoscan use-inotify="yes">\n\
+#     <directory location="\/root" mode="inotify" \
+#     recursive="yes" hidden-files="no"\/>\n\
+#     <\/autoscan>/' -i /root/.config/gerbera/config.xml
 
-RUN mkdir -p /home/gerbera/.config/gerbera 
+VOLUME [ "/media/pictures", "/media/videos", "/media/music", "/root/.config/gerbera" ]
 
-VOLUME [ "/media/pictures", "/media/videos", "/media/music", "/home/gerbera/.config/gerbera" ]
+EXPOSE 49152
+EXPOSE 1900/udp
 
-LABEL GERBERA-VERSION=${VERSION}
-
-ENV LD_LIBRARY_PATH=/usr/local/lib
-
-ENTRYPOINT [ "/usr/local/bin/gerbera" ]
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD [ "gerbera","-p", "49152" ]
