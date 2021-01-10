@@ -1,7 +1,8 @@
 version: "2.0"
 
 services:
-    app:
+    gerbera-upnp:
+        container_name: Gerbera-1.6.4
         build:
             context: .
             args:
