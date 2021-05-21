@@ -1,5 +1,7 @@
-# Gerbera
-Docker installation of [gerbera](https://github.com/gerbera/gerbera), a upnp media server
+# Media Services
+Docker installation of:
+- [gerbera](https://github.com/gerbera/gerbera), a upnp media server
+- [deluge](https://hub.docker.com/r/linuxserver/deluge), a BitTorrent client
 
 ## Usage
 

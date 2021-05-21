@@ -5,5 +5,17 @@ services:
     container_name: gerbera
     network_mode: host
     volumes:
-      - ./config:/var/run/gerbera/.config/gerbera
+      - ./gerberaConfig:/var/run/gerbera/.config/gerbera
       - ./content:/content:ro
+    restart: unless-stopped
+  deluge:
+    image: ghcr.io/linuxserver/deluge
+    container_name: deluge
+    network_mode: host
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - ./delugeConfig:/config
+      - ./content:/downloads
+    restart: unless-stopped
