@@ -1,1 +1,0 @@
-# Gerbera config file
