@@ -19,6 +19,23 @@ services:
       - ./delugeConfig:/config
       - ./content:/downloads
     restart: unless-stopped
+  vsftpd:
+    image: fauria/vsftpd
+    container_name: vsftpd
+    ports:
+      - 20:20
+      - 21:21
+      - 21100-21110:21100-21110
+    environment:
+      - FTP_USER=admin       # Demo only
+      - FTP_PASS=12345678x@X # Demo only
+      - PASV_ADDRESS=127.0.0.1
+      - PASV_MIN_PORT=21100
+      - PASV_MAX_PORT=21110
+    volumes:
+      - ./ftpLog:/var/log/vsftpd
+      - ./ftpContent:/home/vsftpd
+    restart: unless-stopped
   netdata:
     image: netdata/netdata
     container_name: netdata
@@ -30,9 +47,6 @@ services:
     security_opt:
       - apparmor:unconfined
     volumes:
-      #   - ./netdataconfig:/etc/netdata
-      #   - ./netdatalib:/var/lib/netdata
-      #   - ./netdatacache:/var/cache/netdata
       - /etc/passwd:/host/etc/passwd:ro
       - /etc/group:/host/etc/group:ro
       - /proc:/host/proc:ro
