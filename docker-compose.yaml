@@ -36,6 +36,13 @@ services:
       - ./ftpLog:/var/log/vsftpd
       - ./ftpContent:/home/vsftpd
     restart: unless-stopped
+  torproxy:
+    image: dperson/torproxy
+    container_name: torproxy
+    ports:
+      - 0.0.0.0:8118:8118
+      - 0.0.0.0:9050:9050
+    restart: unless-stopped
   netdata:
     image: netdata/netdata
     container_name: netdata
